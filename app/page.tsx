@@ -51,7 +51,7 @@ export default function Home() {
             </div>
             <div className="hidden sm:flex items-center space-x-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg text-xs font-mono text-slate-400">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>Generator: Kimi K3 | Judge: Gemma 4 31B</span>
+              <span>Generator: Gemma 4 26B | Judge: Gemma 4 31B</span>
             </div>
           </div>
         </header>
@@ -112,7 +112,7 @@ export default function Home() {
                 <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                   <h2 className="font-semibold text-slate-200">Generated Script</h2>
                   <span className="text-xs font-mono bg-indigo-950 text-indigo-300 border border-indigo-800 px-2 py-0.5 rounded">
-                    Kimi K3
+                    Gemma 4 26B
                   </span>
                 </div>
                 
