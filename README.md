@@ -1,86 +1,123 @@
 # Creative Eval Harness 
 
-A production-grade LLM orchestration harness and evaluation loop designed for subjective creative content generation (film & TV scene rendering), featuring an interactive Web UI deployed on Vercel and powered by **NVIDIA API infrastructure**.
+An end-to-end autonomous LLM Control Loop & Evaluation System built with Next.js 14, TypeScript, and the Google AI Studio SDK.
 
-Built on the engineering principle of **"small/specialized models + robust harness over big models + hope"**, this application implements model routing by using **Kimi K3** for rapid scene generation and **Gemma 4 31B** as an open-weights LLM Judge for subjective quality control.
-
----
-
-##  Key Technical Features
-
-- **Multi-Model Gateway & Routing (NVIDIA API)**: Routes initial drafting to `Kimi K3` while delegating evaluation to `Gemma 4 31B` via OpenAI-compatible endpoints on NVIDIA's high-performance inference API.
-- **Subjective Quality Evals (LLM-as-a-Judge)**: Evaluates film production standards using structured visual rubrics (Cinematic Lighting, Action Clarity) rendered dynamically on the UI.
-- **Closed-Loop Feedback & Retries**: Automatically passes Gemma 4's feedback back into Kimi K3's retry prompt when evaluation thresholds are not met (up to 2 retries max).
-- **Web Dashboard UI (Vercel-ready)**: Next.js frontend built for seamless deployment on Vercel with serverless API Routes executing the harness loop.
-- **Execution Telemetry**: Monitors round-trip latency, retry attempts, and active model routing per request.
+🔗 **Live Production Deployment:** [https://creative-eval-harness-opal.vercel.app/](https://creative-eval-harness-opal.vercel.app/)
 
 ---
 
-##  Repository Structure
+## System Architecture & Execution Flow
 
 ```text
-creative-eval-harness/
-├── app/
-│   ├── page.tsx          # Next.js Web UI layout & dashboard (Vercel Frontend)
-│   └── api/
-│       └── generate/
-│           └── route.ts  # Vercel API Route / Harness Loop Execution
-├── lib/
-│   ├── harness.ts        # Core control loop, retries, and latency telemetry
-│   ├── generator.ts      # NVIDIA API client (Kimi K3 Generator)
-│   └── evaluator.ts      # NVIDIA API client (Gemma 4 31B LLM-as-a-Judge)
-├── .env.example          # Template for required environment variables
-├── .gitignore            # Git ignore rules
-├── package.json          # Node.js dependencies
-└── README.md             # Project documentation & deployment guide
++------------------------------------------------------------------------------------+
+|                                Next.js UI / Dashboard                              |
+|                    (User Prompt Input & Real-Time Telemetry)                       |
++------------------------------------------------------------------------------------+
+                                         |
+                                         | POST /api/generate
+                                         v
++------------------------------------------------------------------------------------+
+|                          Serverless Control Loop Engine                            |
+|                 (app/api/generate/route.ts | maxDuration = 60s)                      |
++------------------------------------------------------------------------------------+
+                                   |              ^
+                 Attempt i = 1..N  |              | Feedback Loop Context
+                                   v              | (If rejected & attempts left)
++-------------------------------------------------+----------------------------------+
+| STEP 1: Scene Generation                                                           |
+| Model: gemma-4-26b-a4b-it                                                          |
+| Role: Specialized Creative Scriptwriter & Camera Director                          |
++------------------------------------------------------------------------------------+
+                                         |
+                                         v Raw Response
++------------------------------------------------------------------------------------+
+| STEP 2: Fault-Tolerant Parsing & Sanitization                                      |
+| Function: parseJsonFromLlm<T>() (lib/utils.ts)                                     |
+| Role: Brace-Depth Tracking Engine isolates 1st valid JSON object                    |
++------------------------------------------------------------------------------------+
+                                         |
+                                         v Cleaned SceneDraft Payload
++------------------------------------------------------------------------------------+
+| STEP 3: LLM Quality Gate & Evaluation                                              |
+| Model: gemma-4-31b-it                                                              |
+| Role: Senior Film Director / Judge Scoring (Cinematic Lighting & Action Clarity)   |
++------------------------------------------------------------------------------------+
+                                         |
+                    +--------------------+--------------------+
+                    |                                         |
+         [ Approved (Scores >= 4/5) ]               [ Rejected (Scores < 4/5) ]
+                    |                                         |
+                    v                                         v
+        Return Payload to Dashboard               If attempt <= maxRetries:
+        (Telemetry, Latency, Scores)              Inject Feedback & Retry Step 1
+
 ```
 
 ---
 
-## Quickstart
+## Core Architectural Principles
 
-### 1. Local Setup
+### 1. Autonomous Control Loop & Self-Correction
 
-Clone the repository and install dependencies:
+* **Closed Loop Feedback:** The orchestrator runs an agent loop. When the judge (`gemma-4-31b-it`) flags issues in action clarity or visual lighting, the critique is injected directly into the prompt context of the generator for the next pass.
+* **Deterministic Termination:** Ensures bounded execution via strict retry caps (`maxRetries = 2`) and serverless execution timeouts (`maxDuration = 60`).
 
+### 2. Specialist Dual-Model Routing
+
+* **Generator (`gemma-4-26b-a4b-it`):** High-throughput model specialized for narrative flow, visual beat generation, and technical camera angle specifications.
+* **Evaluator / Judge (`gemma-4-31b-it`):** High-reasoning model operating as an unbiased quality filter to prevent self-evaluation bias.
+
+### 3. Resilience Engine (Brace-Depth JSON Extractor)
+
+* **Zero-Break Parsing:** Uses string boundary tracking and balanced curly-brace depth counters (`{ ... }`) in `lib/utils.ts`.
+* **LLM Fluff Isolation:** Strips markdown code-block wrappers (````json`), trailing conversational remarks, and extraneous JSON payloads without triggering `SyntaxError` crashes.
+
+---
+
+## Tech Stack
+
+* **Framework:** Next.js 14 (App Router) & React 18
+* **Language:** TypeScript
+* **Styling:** Tailwind CSS
+* **LLM SDK:** Google AI Studio (`@google/generative-ai`)
+* **Deployment Platform:** Vercel (Serverless Edge Infrastructure)
+
+---
+
+## Local Setup & Installation
+
+1. **Clone the repository:**
 ```bash
-git clone https://github.com/YOUR_USERNAME/creative-eval-harness.git
+git clone https://github.com/vcoklat/creative-eval-harness.git
 cd creative-eval-harness
+
+```
+
+
+2. **Install dependencies:**
+```bash
 npm install
+
 ```
 
-### 2. Configure Credentials
 
-Create a `.env.local` file in the root directory using `.env.example`:
-
+3. **Configure Environment Variables:**
+Create a `.env.local` file in the project root:
 ```env
-NVIDIA_API_KEY=nvapi-your-nvidia-api-key-here
+GEMINI_API_KEY=your_google_ai_studio_api_key_here
+
 ```
 
-### 3. Run Development Server
 
-Launch the local Next.js server:
-
+4. **Start the development server:**
 ```bash
 npm run dev
+
 ```
 
-Open `http://localhost:3000` in your browser to view the interactive dashboard.
 
----
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## Deploying to Vercel
+```
 
-1. Push your repository to GitHub.
-2. Import the project into your [Vercel Dashboard](https://vercel.com).
-3. Add `NVIDIA_API_KEY` under **Environment Variables** in Vercel settings.
-4. Click **Deploy**. Vercel will automatically build and host your Web UI and API routes.
-
----
-
-## User Interface Overview
-
-1. **Input Panel**: Type a creative film/TV scene prompt or load preset ideas.
-2. **Generation View**: Formatted scene script output generated by Kimi K3.
-3. **Evaluation Scorecard**: Gemma 4 31B LLM Judge ratings for Cinematic Lighting, Action Clarity, and feedback.
-4. **Telemetry Bar**: Displays round-trip latency, retry counts, and dynamic routing models.
+```
