@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { SceneDraft, EvalScore } from './types';
-import { cleanJsonResponse } from './utils';
+import { parseJsonFromLlm } from './utils';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
@@ -21,7 +21,7 @@ export async function evaluateScene(scene: SceneDraft): Promise<EvalScore> {
   2. "approved" bernilai true HANYA JIKA kedua skor >= 4.
   3. Berikan "feedback" maksimal 2 kalimat ringkas untuk instruksi perbaikan jika tidak approved.
 
-  Kembalikan HANYA JSON murni dengan format persis:
+  Kembalikan HANYA satu objek JSON valid dengan format:
   {
     "cinematic_lighting": 4,
     "action_clarity": 4,
@@ -31,12 +31,9 @@ export async function evaluateScene(scene: SceneDraft): Promise<EvalScore> {
   `;
 
   const result = await model.generateContent([
-    { text: 'Kamu adalah juri penilai kualitas visual naskah yang ketat dan objektif. Balas HANYA dengan objek JSON valid.' },
+    { text: 'Kamu adalah juri penilai kualitas visual naskah yang ketat dan objektif. Balas HANYA dengan satu objek JSON valid.' },
     { text: prompt },
   ]);
 
-  const rawText = result.response.text();
-  const cleanedText = cleanJsonResponse(rawText);
-
-  return JSON.parse(cleanedText) as EvalScore;
+  return parseJsonFromLlm<EvalScore>(result.response.text());
 }

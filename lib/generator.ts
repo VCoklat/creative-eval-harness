@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { SceneDraft } from './types';
-import { cleanJsonResponse } from './utils';
+import { parseJsonFromLlm } from './utils';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
@@ -16,13 +16,10 @@ export async function generateScene(idea: string, feedback?: string): Promise<Sc
 
   const result = await model.generateContent([
     {
-      text: 'Kamu adalah penulis naskah film profesional. Kembalikan HANYA objek JSON tanpa teks tambahan dengan format: {"scene_heading": "...", "action_description": "...", "camera_angle": "..."}',
+      text: 'Kamu adalah penulis naskah film profesional. Kembalikan HANYA satu objek JSON valid dengan kunci: "scene_heading", "action_description", "camera_angle". Jangan tambahkan teks percakapan atau JSON lain.',
     },
     { text: prompt },
   ]);
 
-  const rawText = result.response.text();
-  const cleanedText = cleanJsonResponse(rawText);
-
-  return JSON.parse(cleanedText) as SceneDraft;
+  return parseJsonFromLlm<SceneDraft>(result.response.text());
 }
