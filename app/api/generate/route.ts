@@ -37,8 +37,8 @@ export async function POST(req: Request) {
       attempts,
       latency_seconds: latencySeconds,
       model_routing: {
-        generator: 'nvidia/moonshotai/kimi-k3',
-        evaluator: 'nvidia/google/gemma-4-31b-it',
+        generator: 'google/gemma-4-26b-a4b-it',
+        evaluator: 'google/gemma-4-31b-it',
       },
     };
 

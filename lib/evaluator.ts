@@ -1,12 +1,14 @@
-import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { SceneDraft, EvalScore } from './types';
 
-const nvidiaClient = new OpenAI({
-  apiKey: process.env.NVIDIA_API_KEY,
-  baseURL: 'https://integrate.api.nvidia.com/v1',
-});
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export async function evaluateScene(scene: SceneDraft): Promise<EvalScore> {
+  const model = genAI.getGenerativeModel({
+    model: 'gemma-4-31b-it',
+    generationConfig: { responseMimeType: 'application/json' },
+  });
+
   const prompt = `
   Bertindak sebagai Sutradara Film Senior. Evaluasi draf adegan berikut berdasarkan standar visual produksi:
   - Heading: ${scene.scene_heading}
@@ -27,19 +29,10 @@ export async function evaluateScene(scene: SceneDraft): Promise<EvalScore> {
   }
   `;
 
-  const response = await nvidiaClient.chat.completions.create({
-    model: 'google/gemma-4-31b-it',
-    messages: [
-      {
-        role: 'system',
-        content: 'Kamu adalah juri penilai kualitas visual naskah yang ketat dan objektif.',
-      },
-      { role: 'user', content: prompt },
-    ],
-    response_format: { type: 'json_object' },
-    temperature: 0.2,
-  });
+  const result = await model.generateContent([
+    { text: 'Kamu adalah juri penilai kualitas visual naskah yang ketat dan objektif.' },
+    { text: prompt },
+  ]);
 
-  const content = response.choices[0].message.content || '{}';
-  return JSON.parse(content) as EvalScore;
+  return JSON.parse(result.response.text()) as EvalScore;
 }
